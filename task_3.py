@@ -138,7 +138,7 @@ for i in range(k):
     s_1[i,:,:] = cov_matrix_1/k
 
 # Initialize array Z that will get the predictions of each Gaussian on each sample
-Z_1 = np.zeros((N_1 + N_2,k)) # shape Nxk
+Z_1 = np.zeros((N_1,k)) # shape Nxk
 
 ###############################
 # run Expectation Maximization algorithm for n_iter iterations
@@ -146,17 +146,17 @@ for t in range(n_iter_1):
     print('Iteration {:03}/{:03}'.format(t+1, n_iter_1))
 
     # Do the E-step
-    Z_1 = get_predictions(mu_1, s_1, p_1, X_phonemes_1_2)
+    Z_1 = get_predictions(mu_1, s_1, p_1, X_phonemes_1)
     Z_1 = normalize(Z_1, axis=1, norm='l1')
 
     # Do the M-step:
     for i in range(k):
-        mu_1[i,:] = np.matmul(X_phonemes_1_2.transpose(),Z_1[:,i]) / np.sum(Z_1[:,i])
+        mu_1[i,:] = np.matmul(X_phonemes_1.transpose(),Z_1[:,i]) / np.sum(Z_1[:,i])
         # We will fit Gaussians with diagonal covariance matrices
         mu_i_1 = mu_1[i,:]
         mu_i_1 = np.expand_dims(mu_i_1, axis=1)
-        mu_i_repeated_1 = np.repeat(mu_i_1, N_1 + N_2, axis=1)
-        X_minus_mu_1 = (X_phonemes_1_2.transpose() - mu_i_repeated_1)**2
+        mu_i_repeated_1 = np.repeat(mu_i_1, N_1, axis=1)
+        X_minus_mu_1 = (X_phonemes_1.transpose() - mu_i_repeated_1)**2
         res_1 = np.squeeze( np.matmul(X_minus_mu_1, np.expand_dims(Z_1[:,i], axis=1)))/np.sum(Z_1[:,i])
         s_1[i,:,:] = np.diag(res_1)
         p_1[i] = np.mean(Z_1[:,i])
@@ -172,7 +172,7 @@ for i in range(k):
     s_2[i,:,:] = cov_matrix_2/k
 
 # Initialize array Z that will get the predictions of each Gaussian on each sample
-Z_2 = np.zeros((N_2 + N_1,k)) # shape Nxk
+Z_2 = np.zeros((N_2,k)) # shape Nxk
 
 ###############################
 # run Expectation Maximization algorithm for n_iter iterations
@@ -180,32 +180,36 @@ for t in range(n_iter_2):
     print('Iteration {:03}/{:03}'.format(t+1, n_iter_2))
 
     # Do the E-step
-    Z_2 = get_predictions(mu_2, s_2, p_2, X_phonemes_1_2)
+    Z_2 = get_predictions(mu_2, s_2, p_2, X_phonemes_2)
     Z_2 = normalize(Z_2, axis=1, norm='l1')
 
     # Do the M-step:
     for i in range(k):
-        mu_2[i,:] = np.matmul(X_phonemes_1_2.transpose(),Z_2[:,i]) / np.sum(Z_2[:,i])
+        mu_2[i,:] = np.matmul(X_phonemes_2.transpose(),Z_2[:,i]) / np.sum(Z_2[:,i])
         # We will fit Gaussians with diagonal covariance matrices
         mu_i_2 = mu_2[i,:]
         mu_i_2 = np.expand_dims(mu_i_2, axis=1)
-        mu_i_repeated_2 = np.repeat(mu_i_2, N_2 + N_1, axis=1)
-        X_minus_mu_2 = (X_phonemes_1_2.transpose() - mu_i_repeated_2)**2
+        mu_i_repeated_2 = np.repeat(mu_i_2, N_2, axis=1)
+        X_minus_mu_2 = (X_phonemes_2.transpose() - mu_i_repeated_2)**2
         res_2 = np.squeeze( np.matmul(X_minus_mu_2, np.expand_dims(Z_2[:,i], axis=1)))/np.sum(Z_2[:,i])
         s_2[i,:,:] = np.diag(res_2)
         p_2[i] = np.mean(Z_2[:,i])
 
+P1 = get_predictions(mu_1, s_1, p_1, X_phonemes_1_2)
+P2 = get_predictions(mu_2, s_2, p_2, X_phonemes_1_2)
+
+
 false = 0
 right = 0
 accout = 0
-for i in range(len(Z_1)):
-    if Z_1[i][0] + Z_1[i][1] + Z_1[i][2] > Z_2[i][0] + Z_2[i][1] + Z_2[i][2]:
+for i in range(len(P1)):
+    if P1[i][0] + P1[i][1] + P1[i][2] > P2[i][0] + P2[i][1] + P2[i][2]:
         if i not in Ph_1 and i in Ph_2:
             false += 1
         else:
             right += 1
 
-    elif Z_1[i][0] + Z_1[i][1] + Z_1[i][2] < Z_2[i][0] + Z_2[i][1] + Z_2[i][2]:
+    elif P1[i][0] + P1[i][1] + P1[i][2] < P2[i][0] + P2[i][1] + P2[i][2]:
         if i not in Ph_2 and i in Ph_1:
             false += 1
         else:
